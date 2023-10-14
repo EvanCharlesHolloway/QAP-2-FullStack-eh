@@ -35,10 +35,26 @@ const server = http.createServer((req, res) => {
             eventEmitter.emit('log', 'Blog page accessed');
             serveHTML(res, 'blog.html');
             break;
+        case '/socials':
+            eventEmitter.emit('log', 'Socials page accessed');
+            serveHTML(res, 'socials.html');
+            break;
         default:
             eventEmitter.emit('log', 'Page not found');
             serveHTML(res, 'notfound.html');
     }
+
+    // After serving a response, emit an event based on the HTTP status code
+    res.on('finish', () => {
+        const statusCode = res.statusCode;
+        if (statusCode >= 200 && statusCode < 300) {
+            eventEmitter.emit('success', `Request for ${pathName} - Status Code: ${statusCode}`);
+        } else if (statusCode >= 400 && statusCode < 500) {
+            eventEmitter.emit('clientError', `Client Error for ${pathName} - Status Code: ${statusCode}`);
+        } else if (statusCode >= 500) {
+            eventEmitter.emit('serverError', `Server Error for ${pathName} - Status Code: ${statusCode}`);
+        }
+    });
 });
 
 function serveHTML(res, fileName) {
@@ -75,12 +91,17 @@ function serveHTML(res, fileName) {
     });
 }
 
-eventEmitter.on('log', (message) => {
-    console.log(message);
-    fs.appendFile('server.log', message + '\n', (err) => {
-        if (err) throw err;
-        console.log('Log has been saved to server.log');
-    });
+// Usage of eventEmitter.on() method for custom events
+eventEmitter.on('success', (message) => {
+    console.log(`Success: ${message}`);
+});
+
+eventEmitter.on('clientError', (message) => {
+    console.error(`Client Error: ${message}`);
+});
+
+eventEmitter.on('serverError', (message) => {
+    console.error(`Server Error: ${message}`);
 });
 
 const PORT = 3002;

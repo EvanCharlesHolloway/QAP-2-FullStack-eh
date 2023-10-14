@@ -1,7 +1,9 @@
 const http = require('http');
 const url = require('url');
 const fs = require('fs');
+const path = require('path');
 const events = require('events');
+
 const eventEmitter = new events.EventEmitter();
 
 const server = http.createServer((req, res) => {
@@ -11,38 +13,66 @@ const server = http.createServer((req, res) => {
     switch (pathName) {
         case '/about':
             eventEmitter.emit('log', 'About page accessed');
-            handleResponse(res, 'About Us Page');
+            serveHTML(res, 'about.html');
             break;
         case '/contact':
             eventEmitter.emit('log', 'Contact page accessed');
-            handleResponse(res, 'Contact Us Page');
+            serveHTML(res, 'contact.html');
             break;
         case '/products':
             eventEmitter.emit('log', 'Products page accessed');
-            handleResponse(res, 'Our Products');
+            serveHTML(res, 'products.html');
             break;
         case '/subscribe':
             eventEmitter.emit('log', 'Subscribe page accessed');
-            handleResponse(res, 'Subscribe Now');
+            serveHTML(res, 'subscribe.html');
             break;
         case '/services':
             eventEmitter.emit('log', 'Services page accessed');
-            handleResponse(res, 'Our Services');
+            serveHTML(res, 'services.html');
             break;
         case '/blog':
             eventEmitter.emit('log', 'Blog page accessed');
-            handleResponse(res, 'Latest Blog Posts');
+            serveHTML(res, 'blog.html');
             break;
         default:
             eventEmitter.emit('log', 'Page not found');
-            handleResponse(res, 'Page Not Found');
+            serveHTML(res, 'notfound.html');
     }
 });
 
-function handleResponse(res, content) {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write(`<h1>${content}</h1>`);
-    res.end();
+function serveHTML(res, fileName) {
+    const filePath = path.join(__dirname, 'views', fileName);
+
+    // Determine the file extension
+    const fileExtension = path.extname(filePath).toLowerCase();
+
+    // Define content types based on file extensions
+    const contentTypeMap = {
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+    };
+
+    // Set the Content-Type header based on the file extension
+    const contentType = contentTypeMap[fileExtension] || 'application/octet-stream';
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            eventEmitter.emit('log', `File not found: ${filePath}`);
+            res.writeHead(404, { 'Content-Type': 'text/html' });
+            res.end('<h1>404 Not Found</h1>');
+        } else {
+            eventEmitter.emit('log', `File served: ${filePath}`);
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.write(data);
+            res.end();
+        }
+    });
 }
 
 eventEmitter.on('log', (message) => {
